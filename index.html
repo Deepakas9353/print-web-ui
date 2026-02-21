@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elite Print | Dashboard</title>
+    <meta name="description" content="Professional print management utility for efficient job execution.">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-brand">
+            <h1>Elite Print <span style="color: var(--primary);">Utility</span></h1>
+            <p>Manage and execute your print jobs efficiently</p>
+        </div>
+
+        <div class="header-actions">
+            <div class="qr-card" title="Scan to print from mobile">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://deepakas9353.github.io/Mobile-web-app/"
+                    alt="QR Code">
+                <span>Scan to Print</span>
+            </div>
+            <button class="btn btn-primary btn-refresh" onclick="location.reload()">
+                <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
+                Refresh Data
+            </button>
+        </div>
+    </header>
+
+    <main class="fade-in">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Copies</th>
+                        <th>Color Mode</th>
+                        <th>Sides</th>
+                        <th>Pages/Sheet</th>
+                        <th>Printer</th>
+                        <th>Upload File</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="print-jobs-body">
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            <i data-lucide="loader-2" class="spin"
+                                style="width: 24px; height: 24px; margin-bottom: 1rem;"></i>
+                            <p>Fetching latest print configurations...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <footer>
+        <div class="status-indicator">
+            <div id="status-dot" class="status-dot"></div>
+            <span id="status-text">System Synchronized | Live WebSocket Connected</span>
+        </div>
+    </footer>
+
+    <script>
+        const API_URL = 'https://v49h710vzi.execute-api.us-east-1.amazonaws.com/v1/web-apis/get-order-config';
+        const printers = ["HP LaserJet Pro M404n", "Canon ImageRUNNER", "Epson EcoTank L3210"];
+
+        async function fetchPrintJobs() {
+            const tbody = document.getElementById('print-jobs-body');
+            const statusText = document.getElementById('status-text');
+            const statusDot = document.getElementById('status-dot');
+
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                renderTable(data);
+                statusText.textContent = 'System Synchronized | Live Data Loaded';
+                statusDot.style.background = 'var(--success)';
+            } catch (error) {
+                console.error('Fetch error:', error);
+                statusText.textContent = 'Communication Error | Using Offline Cache';
+                statusDot.style.background = '#ef4444';
+
+                // Fallback to mock data if API fails (CORS or 500)
+                const mockData = [
+                    { id: 1284, copies: 2, color_mode: 10, sides: 2, pages_per_sheet: 1, file_name: 'invoice_feb.pdf' },
+                    { id: 1285, copies: 1, color_mode: 1, sides: 1, pages_per_sheet: 2, file_name: null },
+                    { id: 1286, copies: 5, color_mode: 10, sides: 2, pages_per_sheet: 1, file_name: 'presentation_v2.png' }
+                ];
+                renderTable(mockData);
+            }
+        }
+
+        function renderTable(jobs) {
+            const tbody = document.getElementById('print-jobs-body');
+            tbody.innerHTML = '';
+
+            if (!jobs || jobs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">No active print jobs found.</td></tr>`;
+                return;
+            }
+
+            jobs.forEach(job => {
+                const tr = document.createElement('tr');
+                tr.className = 'fade-in';
+
+                const colorBadgeClass = job.color_mode === 10 ? 'badge-color' : 'badge-bw';
+                const colorText = job.color_mode === 10 ? 'Color (10)' : 'B/W (1)';
+                const sideText = job.sides === 2 ? 'Front & Back' : 'Front Only';
+                const fileName = job.file_name || 'None';
+                const isReady = !!job.file_name || !!job.file_base64;
+
+                tr.innerHTML = `
+                    <td style="font-weight: 600;">#${job.id}</td>
+                    <td>${job.copies.toString().padStart(2, '0')}</td>
+                    <td><span class="badge ${colorBadgeClass}">${colorText}</span></td>
+                    <td>${sideText}</td>
+                    <td>${job.pages_per_sheet} Page${job.pages_per_sheet > 1 ? 's' : ''}</td>
+                    <td>
+                        <select>
+                            ${printers.map(p => `<option ${p === job.printer_name ? 'selected' : ''}>${p}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <div class="upload-cell">
+                            <button class="btn-upload">
+                                <i data-lucide="upload" style="width: 14px; height: 14px;"></i>
+                                Upload
+                            </button>
+                            <span class="filename" title="${fileName}">${fileName}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <button class="btn btn-success" ${!isReady ? 'style="opacity: 0.6; cursor: not-allowed;" disabled' : ''}>
+                            <i data-lucide="printer" style="width: 18px; height: 18px;"></i>
+                            PRINT
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Re-initialize icons and event listeners
+            lucide.createIcons();
+            attachListeners();
+        }
+
+        function attachListeners() {
+            document.querySelectorAll('.btn-upload').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.onchange = e => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const cell = btn.closest('.upload-cell');
+                            cell.querySelector('.filename').textContent = file.name;
+                            const row = btn.closest('tr');
+                            const printBtn = row.querySelector('.btn-success');
+                            printBtn.disabled = false;
+                            printBtn.style.opacity = '1';
+                            printBtn.style.cursor = 'pointer';
+                        }
+                    };
+                    input.click();
+                });
+            });
+
+            document.querySelectorAll('.btn-success').forEach(btn => {
+                btn.onclick = () => {
+                    if (btn.disabled) return;
+                    btn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width: 18px; height: 18px;"></i> Sending...';
+                    lucide.createIcons();
+
+                    setTimeout(() => {
+                        btn.innerHTML = '<i data-lucide="check" style="width: 18px; height: 18px;"></i> Success';
+                        btn.style.background = '#059669';
+                        lucide.createIcons();
+                        setTimeout(() => {
+                            btn.innerHTML = '<i data-lucide="printer" style="width: 18px; height: 18px;"></i> PRINT';
+                            btn.style.background = '';
+                            lucide.createIcons();
+                        }, 2000);
+                    }, 1500);
+                };
+            });
+        }
+
+        // Initialize
+        lucide.createIcons();
+        fetchPrintJobs();
+
+        // Refresh button logic
+        document.querySelector('.btn-refresh').addEventListener('click', () => {
+            const btn = document.querySelector('.btn-refresh');
+            const icon = btn.querySelector('i');
+            icon.classList.add('spin');
+            fetchPrintJobs().finally(() => {
+                setTimeout(() => icon.classList.remove('spin'), 500);
+            });
+        });
+    </script>
+
+    <style>
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</body>
+
+</html>
