@@ -14,20 +14,21 @@
 
 <body>
     <div id="loading-overlay">
-        <div class="loader-container">
-            <div class="loader-icon">
-                <i data-lucide="printer" style="width: 32px; height: 32px;"></i>
+        <div class="loader-content">
+            <div class="loader-visual">
+                <div class="loader-circle"></div>
+                <i data-lucide="printer" class="loader-icon-inner"></i>
             </div>
-            <h2>Detecting Printers</h2>
-            <p>Please wait, we are fetching system printer details from your Tiny Agent...</p>
-            <div class="loader-dots">
-                <span></span>
-                <span></span>
-                <span></span>
+            <div class="loader-text">
+                <h2>Syncing with Tiny Agent</h2>
+                <p>Establishing secure connection and detecting system printers...</p>
             </div>
-            <button onclick="hideLoadingOverlay()"
-                style="margin-top: 2rem; background: none; border: none; color: var(--primary); font-size: 0.8rem; cursor: pointer; text-decoration: underline;">Skip
-                and use Default Printer</button>
+            <div class="loader-progress">
+                <div class="progress-bar"></div>
+            </div>
+            <button class="btn-skip" onclick="hideLoadingOverlay()">
+                Skip and use default settings
+            </button>
         </div>
     </div>
 

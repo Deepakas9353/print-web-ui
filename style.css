@@ -316,128 +316,125 @@ footer {
     }
 }
 
-/* Loading Overlay */
+/* Loading Overlay Refactor */
 #loading-overlay {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(248, 250, 252, 0.9);
-    backdrop-filter: blur(15px);
-    z-index: 1000;
+    width: 100vw;
+    height: 100vh;
+    background: #ffffff;
+    z-index: 9999;
     display: flex;
-    flex-direction: column;
-    justify-content: center;
     align-items: center;
-    transition: opacity 0.5s ease, visibility 0.5s ease;
+    justify-content: center;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 #loading-overlay.hidden {
     opacity: 0;
     visibility: hidden;
+    transform: scale(1.1);
 }
 
-.loader-container {
+.loader-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 320px;
     text-align: center;
-    background: white;
-    padding: 3rem;
-    border-radius: 24px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
-    border: 1px solid var(--border);
-    max-width: 400px;
-    width: 90%;
-    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.loader-icon {
-    width: 60px;
-    height: 60px;
-    background: #eff6ff;
-    color: var(--primary);
-    border-radius: 16px;
+.loader-visual {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin-bottom: 2rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 1.5rem;
-    animation: loaderPulse 2s infinite ease-in-out;
 }
 
-@keyframes loaderPulse {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.2);
-    }
-
-    50% {
-        transform: scale(1.05);
-        box-shadow: 0 0 0 20px rgba(37, 99, 235, 0);
-    }
-
-    100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
-    }
+.loader-circle {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 3px solid #f1f5f9;
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
 }
 
-.loader-container h2 {
+.loader-icon-inner {
+    width: 32px;
+    height: 32px;
+    color: var(--primary);
+    animation: pulse 2s infinite;
+}
+
+.loader-text h2 {
     font-size: 1.25rem;
     font-weight: 700;
+    color: var(--text-main);
     margin-bottom: 0.5rem;
 }
 
-.loader-container p {
-    color: var(--text-muted);
+.loader-text p {
     font-size: 0.875rem;
-    line-height: 1.5;
+    color: var(--text-muted);
+    line-height: 1.6;
 }
 
-.loader-dots {
-    display: flex;
-    gap: 4px;
-    justify-content: center;
-    margin-top: 1rem;
+.loader-progress {
+    width: 100%;
+    height: 4px;
+    background: #f1f5f9;
+    border-radius: 10px;
+    margin-top: 2rem;
+    overflow: hidden;
 }
 
-.loader-dots span {
-    width: 6px;
-    height: 6px;
+.progress-bar {
+    width: 40%;
+    height: 100%;
     background: var(--primary);
-    border-radius: 50%;
-    opacity: 0.3;
-    animation: dotBreath 1.5s infinite;
+    border-radius: 10px;
+    animation: progressMove 2s infinite ease-in-out;
 }
 
-.loader-dots span:nth-child(2) {
-    animation-delay: 0.2s;
-}
-
-.loader-dots span:nth-child(3) {
-    animation-delay: 0.4s;
-}
-
-@keyframes dotBreath {
-
-    0%,
-    100% {
-        opacity: 0.3;
-        transform: scale(1);
+@keyframes progressMove {
+    0% {
+        transform: translateX(-100%);
+        width: 30%;
     }
 
     50% {
-        opacity: 1;
-        transform: scale(1.2);
+        transform: translateX(100%);
+        width: 60%;
     }
+
+    100% {
+        transform: translateX(300%);
+        width: 30%;
+    }
+}
+
+.btn-skip {
+    margin-top: 2.5rem;
+    background: transparent;
+    border: none;
+    color: var(--secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    transition: all 0.2s;
+}
+
+.btn-skip:hover {
+    background: #f1f5f9;
+    color: var(--text-main);
 }
