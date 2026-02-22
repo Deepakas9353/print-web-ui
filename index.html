@@ -13,6 +13,23 @@
 </head>
 
 <body>
+    <div id="loading-overlay">
+        <div class="loader-container">
+            <div class="loader-icon">
+                <i data-lucide="printer" style="width: 32px; height: 32px;"></i>
+            </div>
+            <h2>Detecting Printers</h2>
+            <p>Please wait, we are fetching system printer details from your Tiny Agent...</p>
+            <div class="loader-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <button onclick="hideLoadingOverlay()"
+                style="margin-top: 2rem; background: none; border: none; color: var(--primary); font-size: 0.8rem; cursor: pointer; text-decoration: underline;">Skip
+                and use Default Printer</button>
+        </div>
+    </div>
 
     <header>
         <div class="header-brand">
@@ -78,11 +95,35 @@
             try {
                 const response = await fetch(PRINTER_API);
                 if (response.ok) {
-                    printers = await response.json();
-                    console.log('Printers updated:', printers);
+                    const data = await response.json();
+                    // Treat as "detected" if it's more than just the default or if we have at least one valid printer string
+                    if (data && data.length > 0 && !data.includes("Default Printer")) {
+                        printers = data;
+                        console.log('Real printers detected:', printers);
+                        hideLoadingOverlay();
+                    } else if (data && data.length > 0) {
+                        printers = data;
+                    }
                 }
             } catch (error) {
                 console.error('Error fetching printers:', error);
+            }
+        }
+
+        // Poll for printers every 3 seconds until detected
+        const printerPollInterval = setInterval(async () => {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay && !overlay.classList.contains('hidden')) {
+                await fetchPrinters();
+            } else {
+                clearInterval(printerPollInterval);
+            }
+        }, 3000);
+
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay && !overlay.classList.contains('hidden')) {
+                overlay.classList.add('hidden');
             }
         }
 
