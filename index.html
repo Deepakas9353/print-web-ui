@@ -20,14 +20,14 @@
         </div>
     </div>
 
-    <header>
+    <header class="blue-header">
         <div class="header-brand">
-            <h1>Elite Print <span style="color: var(--primary);">Utility</span></h1>
-            <p>Manage and execute your print jobs efficiently</p>
+            <h1>Elite Print <span style="color: #60a5fa;">Utility</span></h1>
+            <p style="color: rgba(255, 255, 255, 0.8);">Professional print management dashboard</p>
         </div>
 
         <div class="header-actions">
-            <div class="qr-card" title="Scan to print from mobile">
+            <div class="qr-card blue-qr" title="Scan to print from mobile">
                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://deepakas9353.github.io/Mobile-web-app/"
                     alt="QR Code">
                 <span>Scan to Print</span>
@@ -39,34 +39,52 @@
         </div>
     </header>
 
-    <main class="fade-in">
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Copies</th>
-                        <th>Color Mode</th>
-                        <th>Sides</th>
-                        <th>Pages/Sheet</th>
-                        <th>Printer</th>
-                        <th>Status</th>
-                        <th>Upload File</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="print-jobs-body">
-                    <tr>
-                        <td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">
-                            <i data-lucide="loader-2" class="spin"
-                                style="width: 24px; height: 24px; margin-bottom: 1rem;"></i>
-                            <p>Fetching latest print configurations...</p>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </main>
+    <div class="layout-wrapper">
+        <aside class="sidebar-ad">
+            <div class="ad-placeholder">
+                <div class="ad-content">
+                    <i data-lucide="zap" style="width: 32px; height: 32px; margin-bottom: 1rem;"></i>
+                    <h3>Ready to Print?</h3>
+                    <p>Sync your Tiny Agent for instant local printing.</p>
+                </div>
+            </div>
+            <div class="ad-placeholder promo">
+                <div class="ad-content">
+                    <i data-lucide="award" style="width: 32px; height: 32px; margin-bottom: 1rem;"></i>
+                    <h3>Premium Service</h3>
+                    <p>Elite Print Utility v2.0</p>
+                </div>
+            </div>
+        </aside>
+
+        <main class="fade-in">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Copies</th>
+                            <th>Color Mode</th>
+                            <th>Sides</th>
+                            <th>Pages/Sheet</th>
+                            <th>Printer/Device Selection</th>
+                            <th>Upload File</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="print-jobs-body">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                                <i data-lucide="loader-2" class="spin"
+                                    style="width: 24px; height: 24px; margin-bottom: 1rem;"></i>
+                                <p>Fetching latest print configurations...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
 
     <footer>
         <div class="status-indicator">
@@ -217,16 +235,24 @@
                     <td>${sideText}</td>
                     <td>${job.pages_per_sheet} Page${job.pages_per_sheet > 1 ? 's' : ''}</td>
                     <td>
-                        <div class="printer-cell">
-                            <select class="printer-select" data-id="${job.id}">
-                                ${printers.map(p => `<option value="${p}">${p}</option>`).join('')}
-                            </select>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="status-label">
-                            <span class="status-indicator-dot ${statusClass}"></span>
-                            ${statusLabel}
+                        <div class="printer-field">
+                            <div class="printer-select-wrapper">
+                                <select class="printer-select" data-id="${job.id}">
+                                    ${printers.map(p => {
+                    const isSelected = job.printer_name === p;
+                    const pStatus = (isSelected && status.toLowerCase() === 'printing') ? 'Busy' : 'Available';
+                    const pIcon = (isSelected && status.toLowerCase() === 'printing') ? '🟡' : '🟢';
+                    return `<option value="${p}" ${isSelected ? 'selected' : ''}>${pIcon} ${p} (${pStatus})</option>`;
+                }).join('')}
+                                </select>
+                            </div>
+                            <div class="printer-status-row">
+                                <div class="status-pill-mini ${statusClass}">
+                                    <span class="dot"></span>
+                                    <span>${statusLabel}</span>
+                                </div>
+                                <span class="mini-label-light">Printer Status</span>
+                            </div>
                         </div>
                     </td>
                     <td>
