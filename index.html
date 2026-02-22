@@ -13,22 +13,10 @@
 </head>
 
 <body>
-    <div id="loading-overlay">
-        <div class="loader-content">
-            <div class="loader-visual">
-                <div class="loader-circle"></div>
-                <i data-lucide="printer" class="loader-icon-inner"></i>
-            </div>
-            <div class="loader-text">
-                <h2>Syncing with Tiny Agent</h2>
-                <p>Establishing secure connection and detecting system printers...</p>
-            </div>
-            <div class="loader-progress">
-                <div class="progress-bar"></div>
-            </div>
-            <button class="btn-skip" onclick="hideLoadingOverlay()">
-                Skip and use default settings
-            </button>
+    <div id="status-banner" class="status-banner warning">
+        <div class="banner-content">
+            <i data-lucide="alert-circle" id="banner-icon"></i>
+            <span id="banner-text">Detecting local printers... Please ensure your Tiny Agent is running.</span>
         </div>
     </div>
 
@@ -97,36 +85,38 @@
                 const response = await fetch(PRINTER_API);
                 if (response.ok) {
                     const data = await response.json();
-                    // Treat as "detected" if it's more than just the default or if we have at least one valid printer string
                     if (data && data.length > 0 && !data.includes("Default Printer")) {
                         printers = data;
                         console.log('Real printers detected:', printers);
-                        hideLoadingOverlay();
-                    } else if (data && data.length > 0) {
-                        printers = data;
+                        updateStatusBanner(true);
+                    } else {
+                        printers = ["Default Printer"];
+                        updateStatusBanner(false);
                     }
                 }
             } catch (error) {
                 console.error('Error fetching printers:', error);
+                updateStatusBanner(false);
             }
         }
 
-        // Poll for printers every 3 seconds until detected
-        const printerPollInterval = setInterval(async () => {
-            const overlay = document.getElementById('loading-overlay');
-            if (overlay && !overlay.classList.contains('hidden')) {
-                await fetchPrinters();
+        function updateStatusBanner(isDetected) {
+            const banner = document.getElementById('status-banner');
+            const bannerText = document.getElementById('banner-text');
+            const icon = document.getElementById('banner-icon');
+
+            if (isDetected) {
+                banner.classList.add('hidden');
             } else {
-                clearInterval(printerPollInterval);
-            }
-        }, 3000);
-
-        function hideLoadingOverlay() {
-            const overlay = document.getElementById('loading-overlay');
-            if (overlay && !overlay.classList.contains('hidden')) {
-                overlay.classList.add('hidden');
+                banner.classList.remove('hidden');
+                banner.className = 'status-banner warning ripple';
+                bannerText.textContent = 'Syncing... No local printers detected. Please start Tiny Agent.';
+                lucide.createIcons();
             }
         }
+
+        // Poll for printers every 3 seconds
+        setInterval(fetchPrinters, 3000);
 
         async function updatePrinter(id, printerName) {
             try {
