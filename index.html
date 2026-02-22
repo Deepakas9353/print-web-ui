@@ -8,6 +8,8 @@
     <meta name="description" content="Professional print management utility for efficient job execution.">
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 </head>
 
 <body>
@@ -68,7 +70,33 @@
 
     <script>
         const API_URL = 'https://v49h710vzi.execute-api.us-east-1.amazonaws.com/v1/web-apis/get-order-config';
-        const printers = ["HP LaserJet Pro M404n", "Canon ImageRUNNER", "Epson EcoTank L3210"];
+        const WS_URL = 'http://print-test-env-env.eba-9gvrcrjp.us-east-1.elasticbeanstalk.com/ws/print-events';
+        const PRINTER_API = 'http://print-test-env-env.eba-9gvrcrjp.us-east-1.elasticbeanstalk.com/v1/web-apis/get-printers';
+        let printers = ["Default Printer"];
+
+        async function fetchPrinters() {
+            try {
+                const response = await fetch(PRINTER_API);
+                if (response.ok) {
+                    printers = await response.json();
+                    console.log('Printers updated:', printers);
+                }
+            } catch (error) {
+                console.error('Error fetching printers:', error);
+            }
+        }
+
+        async function updatePrinter(id, printerName) {
+            try {
+                const url = `http://print-test-env-env.eba-9gvrcrjp.us-east-1.elasticbeanstalk.com/v1/web-apis/update-printer-selection?id=${id}&printerName=${encodeURIComponent(printerName)}`;
+                const response = await fetch(url, { method: 'POST' });
+                if (response.ok) {
+                    console.log(`Printer for #${id} updated to ${printerName}`);
+                }
+            } catch (error) {
+                console.error('Error updating printer:', error);
+            }
+        }
 
         async function fetchPrintJobs() {
             const tbody = document.getElementById('print-jobs-body');
@@ -97,6 +125,33 @@
             }
         }
 
+        function initWebSocket() {
+            const statusText = document.getElementById('status-text');
+            const statusDot = document.getElementById('status-dot');
+
+            const socket = new SockJS(WS_URL);
+            const stompClient = Stomp.over(socket);
+            stompClient.debug = null; // Disable debug logging
+
+            stompClient.connect({}, function (frame) {
+                console.log('Connected to WebSocket');
+                statusText.textContent = 'System Synchronized | Live WebSocket Connected';
+                statusDot.style.background = 'var(--success)';
+
+                stompClient.subscribe('/topic/print-config', function (message) {
+                    if (message.body === 'NEW_PRINT_CONFIG') {
+                        console.log('New print configuration detected. Re-fetching...');
+                        fetchPrintJobs();
+                    }
+                });
+            }, function (error) {
+                console.error('WebSocket Error:', error);
+                statusText.textContent = 'Connection Interrupted | Reconnecting...';
+                statusDot.style.background = '#dc2626';
+                setTimeout(initWebSocket, 5000); // Attempt to reconnect
+            });
+        }
+
         function renderTable(jobs) {
             const tbody = document.getElementById('print-jobs-body');
             tbody.innerHTML = '';
@@ -116,6 +171,25 @@
                 const fileName = job.file_name || 'None';
                 const isReady = !!job.file_name || !!job.file_base64;
 
+                // Status Mapping
+                let statusClass = 'status-idle';
+                let statusText = 'AVAILABLE';
+                const currentStatus = (job.status || 'IDLE').toUpperCase();
+
+                if (currentStatus === 'PRINTING' || currentStatus === 'IN PROGRESS' || currentStatus === 'IN_PROGRESS') {
+                    statusClass = 'status-printing';
+                    statusText = 'PRINTING...';
+                } else if (currentStatus === 'STOPPED' || currentStatus === 'ERROR') {
+                    statusClass = 'status-stopped';
+                    statusText = 'STOPPED';
+                } else if (currentStatus === 'IDLE' || currentStatus === 'AVAILABLE') {
+                    statusClass = 'status-idle';
+                    statusText = 'AVAILABLE';
+                } else {
+                    statusClass = 'status-unknown';
+                    statusText = currentStatus;
+                }
+
                 tr.innerHTML = `
                     <td style="font-weight: 600;">#${job.id}</td>
                     <td>${job.copies.toString().padStart(2, '0')}</td>
@@ -123,9 +197,15 @@
                     <td>${sideText}</td>
                     <td>${job.pages_per_sheet} Page${job.pages_per_sheet > 1 ? 's' : ''}</td>
                     <td>
-                        <select>
-                            ${printers.map(p => `<option ${p === job.printer_name ? 'selected' : ''}>${p}</option>`).join('')}
-                        </select>
+                        <div class="printer-cell">
+                            <div class="status-label" style="color: ${statusClass === 'status-idle' ? '#059669' : (statusClass === 'status-printing' ? '#d97706' : '#dc2626')};">
+                                <span class="status-indicator-dot ${statusClass}"></span>
+                                ${statusText}
+                            </div>
+                            <select onchange="updatePrinter(${job.id}, this.value)">
+                                ${printers.map(p => `<option ${p === job.printer_name ? 'selected' : ''}>${p}</option>`).join('')}
+                            </select>
+                        </div>
                     </td>
                     <td>
                         <div class="upload-cell">
@@ -173,28 +253,46 @@
             });
 
             document.querySelectorAll('.btn-success').forEach(btn => {
-                btn.onclick = () => {
+                btn.onclick = async () => {
                     if (btn.disabled) return;
+
+                    const row = btn.closest('tr');
+                    const orderId = row.querySelector('td').textContent.replace('#', '');
+
                     btn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width: 18px; height: 18px;"></i> Sending...';
                     lucide.createIcons();
 
+                    try {
+                        // Using the Beanstalk URL directly since it's the most reliable for WS/Agent flow
+                        const triggerUrl = `http://print-test-env-env.eba-9gvrcrjp.us-east-1.elasticbeanstalk.com/trigger-print/${orderId}`;
+                        const response = await fetch(triggerUrl);
+
+                        if (response.ok) {
+                            btn.innerHTML = '<i data-lucide="check" style="width: 18px; height: 18px;"></i> Success';
+                            btn.style.background = '#059669';
+                        } else {
+                            throw new Error('Trigger failed');
+                        }
+                    } catch (error) {
+                        console.error('Print trigger error:', error);
+                        btn.innerHTML = '<i data-lucide="alert-circle" style="width: 18px; height: 18px;"></i> Error';
+                        btn.style.background = '#dc2626';
+                    }
+
+                    lucide.createIcons();
                     setTimeout(() => {
-                        btn.innerHTML = '<i data-lucide="check" style="width: 18px; height: 18px;"></i> Success';
-                        btn.style.background = '#059669';
+                        btn.innerHTML = '<i data-lucide="printer" style="width: 18px; height: 18px;"></i> PRINT';
+                        btn.style.background = '';
                         lucide.createIcons();
-                        setTimeout(() => {
-                            btn.innerHTML = '<i data-lucide="printer" style="width: 18px; height: 18px;"></i> PRINT';
-                            btn.style.background = '';
-                            lucide.createIcons();
-                        }, 2000);
-                    }, 1500);
+                    }, 2500);
                 };
             });
         }
 
         // Initialize
         lucide.createIcons();
-        fetchPrintJobs();
+        fetchPrinters().then(() => fetchPrintJobs());
+        initWebSocket();
 
         // Refresh button logic
         document.querySelector('.btn-refresh').addEventListener('click', () => {
@@ -208,6 +306,66 @@
     </script>
 
     <style>
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(1.2);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .status-indicator-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .status-idle {
+            background-color: #10b981;
+            box-shadow: 0 0 8px #10b981;
+        }
+
+        .status-printing {
+            background-color: #f59e0b;
+            box-shadow: 0 0 8px #f59e0b;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-stopped {
+            background-color: #ef4444;
+            box-shadow: 0 0 8px #ef4444;
+        }
+
+        .status-unknown {
+            background-color: #94a3b8;
+        }
+
+        .printer-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .status-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Animations */
         @keyframes spin {
             from {
                 transform: rotate(0deg);
