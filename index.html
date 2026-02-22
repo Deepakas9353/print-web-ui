@@ -50,6 +50,7 @@
                         <th>Sides</th>
                         <th>Pages/Sheet</th>
                         <th>Printer</th>
+                        <th>Status</th>
                         <th>Upload File</th>
                         <th>Actions</th>
                     </tr>
@@ -205,6 +206,10 @@
                 const fileName = job.file_name || 'None';
                 const isReady = !!job.file_name || !!job.file_base64;
 
+                const status = job.status || 'offline';
+                const statusClass = `status-${status.toLowerCase()}`;
+                const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+
                 tr.innerHTML = `
                     <td style="font-weight: 600;">#${job.id}</td>
                     <td>${job.copies.toString().padStart(2, '0')}</td>
@@ -216,6 +221,12 @@
                             <select class="printer-select" data-id="${job.id}">
                                 ${printers.map(p => `<option value="${p}">${p}</option>`).join('')}
                             </select>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="status-label">
+                            <span class="status-indicator-dot ${statusClass}"></span>
+                            ${statusLabel}
                         </div>
                     </td>
                     <td>
