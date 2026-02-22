@@ -75,7 +75,7 @@
     </footer>
 
     <script>
-        const API_URL = 'https://v49h710vzi.execute-api.us-east-1.amazonaws.com/v1/web-apis/get-order-config';
+        const API_URL = 'http://print-test-env-env.eba-9gvrcrjp.us-east-1.elasticbeanstalk.com/v1/web-apis/get-order-config';
         const WS_URL = 'http://print-test-env-env.eba-9gvrcrjp.us-east-1.elasticbeanstalk.com/ws/print-events';
         const PRINTER_API = 'http://print-test-env-env.eba-9gvrcrjp.us-east-1.elasticbeanstalk.com/v1/web-apis/get-printers';
         let printers = ["Default Printer"];
@@ -149,16 +149,13 @@
                 statusDot.style.background = 'var(--success)';
             } catch (error) {
                 console.error('Fetch error:', error);
-                statusText.textContent = 'Communication Error | Using Offline Cache';
+                statusText.textContent = 'Communication Error | Failed to load data';
                 statusDot.style.background = '#ef4444';
-
-                // Fallback to mock data if API fails (CORS or 500)
-                const mockData = [
-                    { id: 1284, copies: 2, color_mode: 10, sides: 2, pages_per_sheet: 1, file_name: 'invoice_feb.pdf' },
-                    { id: 1285, copies: 1, color_mode: 1, sides: 1, pages_per_sheet: 2, file_name: null },
-                    { id: 1286, copies: 5, color_mode: 10, sides: 2, pages_per_sheet: 1, file_name: 'presentation_v2.png' }
-                ];
-                renderTable(mockData);
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 3rem; color: #ef4444;">
+                    <i data-lucide="alert-triangle" style="width: 24px; height: 24px; margin-bottom: 1rem;"></i>
+                    <p>Unable to connect to backend API. Please check your server status.</p>
+                </td></tr>`;
+                lucide.createIcons();
             }
         }
 
